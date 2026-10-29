@@ -83,6 +83,17 @@ internal sealed partial class DoPage : DynamicListPage
             {
                 items.AddRange(_jobs.Select(JobItem));
             }
+
+            if (!IsLoading)
+            {
+                // The search box is single-line; same compose form as Ask (ask-and-do#1).
+                items.Add(new ListItem(new ComposePage(text => _ = RunAsync(text, withClipboard: false)))
+                {
+                    Title = "Compose multi-line…",
+                    Subtitle = "Paste or type a longer task",
+                    Icon = new IconInfo(""),
+                });
+            }
         }
 
         lock (_lock)
