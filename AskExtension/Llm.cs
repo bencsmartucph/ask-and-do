@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Threading.Tasks;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json.Nodes;
@@ -235,6 +236,42 @@ internal static class Llm
         }
 
         return string.IsNullOrWhiteSpace(v) ? null : v.Trim();
+    }
+
+    // Null if the provider knows this model id, else the reason to show. Used by /model
+    // so a typo is refused instead of saved and failing on every later question.
+    public static async Task<string?> CheckModel(bool isClaude, string model)
+    {
+        try
+        {
+            if (isClaude)
+            {
+                var key = EnvKey("AHK_ANTHROPIC_KEY");
+                if (key == null)
+                {
+                    return "No Claude key: AHK_ANTHROPIC_KEY is not set";
+                }
+
+                await new AnthropicClient { ApiKey = key }.Models.Retrieve(model);
+                return null;
+            }
+
+            var gkey = GeminiKey();
+            if (gkey == null)
+            {
+                return "No Gemini key: set GEMINI_API_KEY";
+            }
+
+            using var req = new HttpRequestMessage(HttpMethod.Get,
+                $"https://generativelanguage.googleapis.com/v1beta/models/{Uri.EscapeDataString(model)}");
+            req.Headers.Add("x-goog-api-key", gkey);
+            using var res = await Http.SendAsync(req);
+            return res.IsSuccessStatusCode ? null : $"Gemini has no model '{model}' ({(int)res.StatusCode})";
+        }
+        catch (Exception ex)
+        {
+            return $"Couldn't confirm '{model}', not saved: {ex.Message}";
+        }
     }
 
     private static string? GeminiKey()

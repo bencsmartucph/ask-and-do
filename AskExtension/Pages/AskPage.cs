@@ -243,11 +243,11 @@ internal sealed partial class AskPage : DynamicListPage
             return;
         }
 
-        _cfg = AskConfig.Load();
-        if (_cfg.IsClaude)
+        var isClaude = AskConfig.Load().IsClaude;
+        if (isClaude)
         {
             // The API wants full ids; expand the short names claude -p accepts.
-            _cfg.ClaudeModel = model.ToLowerInvariant() switch
+            model = model.ToLowerInvariant() switch
             {
                 "opus" => "claude-opus-5-5",
                 "sonnet" => "claude-sonnet-5-5",
@@ -256,13 +256,30 @@ internal sealed partial class AskPage : DynamicListPage
                 _ => model,
             };
         }
-        else
-        {
-            _cfg.GeminiModel = model;
-        }
 
-        _cfg.Save();
-        Toast($"Now asking {_cfg.Label}", MessageState.Success);
+        Toast($"Checking {model}...", MessageState.Info);
+        _ = Task.Run(async () =>
+        {
+            var error = await Llm.CheckModel(isClaude, model);
+            if (error != null)
+            {
+                Toast(error.Contains("not saved") ? error : $"{error}; not saved");
+                return;
+            }
+
+            _cfg = AskConfig.Load();
+            if (isClaude)
+            {
+                _cfg.ClaudeModel = model;
+            }
+            else
+            {
+                _cfg.GeminiModel = model;
+            }
+
+            _cfg.Save();
+            Toast($"Now asking {_cfg.Label}", MessageState.Success);
+        });
     }
 
     private void Clear()
