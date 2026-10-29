@@ -246,7 +246,15 @@ internal sealed partial class AskPage : DynamicListPage
         _cfg = AskConfig.Load();
         if (_cfg.IsClaude)
         {
-            _cfg.ClaudeModel = model;
+            // The API wants full ids; expand the short names claude -p accepts.
+            _cfg.ClaudeModel = model.ToLowerInvariant() switch
+            {
+                "opus" => "claude-opus-5-5",
+                "sonnet" => "claude-sonnet-5-5",
+                "haiku" => "claude-haiku-5-5",
+                "fable" => "claude-fable-5-1",
+                _ => model,
+            };
         }
         else
         {

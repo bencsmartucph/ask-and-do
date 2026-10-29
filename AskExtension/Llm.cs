@@ -192,8 +192,10 @@ internal static class Llm
             System = cfg.System,
             Messages = messages,
             // Quick answers: no thinking, low effort -> shortest time to first token.
-            // Haiku 5.5 accepts disabled thinking at effort high or below.
-            Thinking = new ThinkingConfigDisabled(),
+            // Haiku 5.5 accepts disabled thinking; Opus/Sonnet 5.5 reject it and want adaptive.
+            Thinking = cfg.ClaudeModel.Contains("haiku")
+                ? new ThinkingConfigDisabled()
+                : new ThinkingConfigAdaptive(),
             OutputConfig = new OutputConfig { Effort = Effort.Low },
         };
 
